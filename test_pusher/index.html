@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Services</title>
+    <!-- Include Pusher JS -->
+    <script src="https://js.pusher.com/8.2/pusher.min.js"></script>
+    <!-- Include Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for service cards */
+        .service-card {
+            transition: all 0.3s ease;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        #loading {
+            display: none;
+        }
+        .error-message {
+            color: #e3342f;
+            text-align: center;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold text-center mb-8">Available Services</h1>
+        <div id="loading" class="text-center text-gray-500">Loading services...</div>
+        <div id="services-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <script>
+        // Configuration
+        const PUSHER_KEY = 'cf5338c234a513e939b6';
+        const PUSHER_CLUSTER = 'eu';
+        // const API_URL = 'https://maknana-api.coderash.online/api/service/services/';
+        const API_URL = 'http://127.0.0.1:8000/api/service/services/';
+        const AUTH_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUwMDcyOTUyLCJpYXQiOjE3NTAwNjkzNTIsImp0aSI6IjQ1Mzc1ODNjYmNkZjQ2ODJhZGU4ZTE1YTA5ZDYyZjYzIiwidXNlcl9pZCI6MX0.YSUVz_c-s2bSXt82ouGV5gH2bk7bPxfIYy4jixld1HQ';
+
+        // Initialize Pusher
+        const pusher = new Pusher(PUSHER_KEY, {
+            cluster: PUSHER_CLUSTER
+        });
+
+        // Subscribe to the service channel
+        const channel = pusher.subscribe('service-channel');
+
+        // Fetch initial services
+        async function fetchServices() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                const response = await fetch(API_URL, {
+                    headers: {
+                        'Authorization': `Bearer ${AUTH_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                console.log('Response Status:', response.status); // Log status code
+                const text = await response.text(); // Get raw response
+                // console.log('Raw Response:', text); // Log raw response
+                try {
+                     console.log('Parsing JSON response...');
+                    const services = JSON.parse(text);
+                    console.log('Parsed Services:', services); // Log parsed services
+                    console.log('Rendering services...', services.results);
+                    renderServices(services.results || services); // Use results if available
+                    
+                } catch (jsonError) {
+                    throw new Error(`JSON Parse Error: ${jsonError.message}. Raw response: ${text}`);
+                }
+            } catch (error) {
+                console.error('Error fetching services:', error);
+                document.getElementById('loading').innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
+                document.getElementById('loading').style.display = 'block';
+            } finally {
+                if (document.getElementById('services-container').children.length > 0) {
+                    document.getElementById('loading').style.display = 'none';
+                }
+            }
+        }
+
+        // Render services to DOM
+        function renderServices(services) {
+            const container = document.getElementById('services-container');
+            container.innerHTML = ''; // Clear existing services
+            if (!Array.isArray(services) || services.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500">No services available.</p>';
+                return;
+            }
+            services.forEach(service => {
+                const serviceCard = document.createElement('div');
+                serviceCard.className = 'service-card bg-white p-6 rounded-lg shadow-md';
+                serviceCard.setAttribute('data-id', service.id);
+                serviceCard.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-2">${service.name || 'Unnamed Service'}</h3>
+                    <p class="text-gray-600 mb-2">${service.short_description || 'No description available'}</p>
+                    <p class="text-blue-600 font-medium">Price: ${service.price || 'N/A'}</p>
+                `;
+                container.appendChild(serviceCard);
+            });
+        }
+
+        // Handle new service-created event
+        channel.bind('service-created', function(data) {
+            const container = document.getElementById('services-container');
+            const serviceCard = document.createElement('div');
+            serviceCard.className = 'service-card bg-white p-6 rounded-lg shadow-md';
+            serviceCard.setAttribute('data-id', data.id);
+            serviceCard.innerHTML = `
+                <h3 class="text-lg font-semibold mb-2">${data.name || 'Unnamed Service'}</h3>
+                <p class="text-gray-600 mb-2">${data.short_description || 'No description available'}</p>
+                <p class="text-blue-600 font-medium">Price: ${data.price || 'N/A'}</p>
+            `;
+            container.prepend(serviceCard); // Add new service to the top
+        });
+
+        // Handle service-updated event
+        channel.bind('service-updated', function(data) {
+            const serviceCard = document.querySelector(`[data-id="${data.id}"]`);
+            if (serviceCard) {
+                serviceCard.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-2">${data.name || 'Unnamed Service'}</h3>
+                    <p class="text-gray-600 mb-2">${data.short_description || 'No description available'}</p>
+                    <p class="text-blue-600 font-medium">Price: ${data.price || 'N/A'}</p>
+                `;
+            } else {
+                // If service doesn't exist, treat as new
+                const container = document.getElementById('services-container');
+                const newCard = document.createElement('div');
+                newCard.className = 'service-card bg-white p-6 rounded-lg shadow-md';
+                newCard.setAttribute('data-id', data.id);
+                newCard.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-2">${data.name || 'Unnamed Service'}</h3>
+                    <p class="text-gray-600 mb-2">${data.short_description || 'No description available'}</p>
+                    <p class="text-blue-600 font-medium">Price: ${data.price || 'N/A'}</p>
+                `;
+                container.prepend(newCard);
+            }
+        });
+
+        // Load services on page load
+        document.addEventListener('DOMContentLoaded', fetchServices);
+    </script>
+</body>
+</html>
