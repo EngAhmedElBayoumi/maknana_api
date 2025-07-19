@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     'campaigns',
     'notification',
     'django_filters',
-
+    'support',
 ]
 
 MIDDLEWARE = [

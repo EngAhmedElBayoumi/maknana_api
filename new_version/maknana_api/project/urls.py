@@ -51,6 +51,7 @@ urlpatterns = [
     path('api/machine_and_factory/', include('machine_and_factory.urls')),
     path('api/technician/', include('technician.urls')),
     path('api/campaigns/', include('campaigns.urls')),
+    path('api/support/', include('support.urls')),
     path('api/notifications/', include('notification.urls')),
     # refresh token
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
