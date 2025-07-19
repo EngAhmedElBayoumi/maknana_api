@@ -47,6 +47,8 @@ INSTALLED_APPS = [
     'service',
     'machine_and_factory',
     'technician', 
+    'campaigns',
+    'support',
 
 ]
 

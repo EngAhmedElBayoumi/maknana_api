@@ -2,6 +2,14 @@ from django.db import models
 from core.models import CustomUser
 from io import BytesIO
 from django.core.files import File
+
+import uuid
+import os
+
+def upload_to(instance, filename):
+    ext = filename.split('.')[-1]
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    return os.path.join("uploads/images/", filename)
 # Create your models here.
 
 class factory(models.Model):
@@ -18,6 +26,9 @@ class factory(models.Model):
     
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['-id']
     
 
 class machine(models.Model):
@@ -26,13 +37,15 @@ class machine(models.Model):
     status= models.CharField(max_length=100)
     warranty_status= models.CharField(max_length=100, choices=[('warranty', 'warranty'), ('not warranty', 'not warranty')])
     last_maintenance= models.DateField()
-    image= models.ImageField(upload_to='machine_images/', null=True, blank=True)
+    image= models.ImageField(upload_to=upload_to, null=True, blank=True)
     create_at= models.DateTimeField(auto_now_add=True)
     update_at= models.DateTimeField(auto_now=True)
-    catalog= models.FileField(upload_to='machine_catalogs/', null=True, blank=True)
+    catalog= models.FileField(upload_to=upload_to, null=True, blank=True)
     machine_code= models.CharField(max_length=100, null=True, blank=True)
     def __str__(self):
         return self.name
+    class Meta:
+        ordering = ['-id']
     
    
 # malfunction type
@@ -43,46 +56,72 @@ class malfunction_type(models.Model):
     update_at= models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['-id']
    
  
 
 # malfunction request
 class malfunction_request(models.Model):
-    machine= models.ForeignKey(machine, on_delete=models.CASCADE)
-    description= models.TextField()
-    file= models.FileField(upload_to='malfunction_files/', null=True, blank=True)
-    email= models.EmailField()
-    phone= models.CharField(max_length=100)
-    type= models.ForeignKey(malfunction_type, on_delete=models.CASCADE)
-    status= models.CharField(max_length=100, choices=[('pending', 'pending'), ('in progress', 'in progress'), ('completed', 'completed')])
     client= models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    factory= models.ForeignKey(factory, on_delete=models.CASCADE, null=True, blank=True)
+    machine= models.ForeignKey(machine, on_delete=models.CASCADE)
+    type= models.ForeignKey(malfunction_type, on_delete=models.CASCADE)
+    description= models.TextField()
+    file= models.FileField(upload_to=upload_to, null=True, blank=True)
     technician= models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='technician_malfunction_request', blank=True)
+    periority= models.CharField(max_length=100, choices=[('low', 'low'), ('medium', 'medium'), ('high', 'high')], default='medium')
+    email= models.EmailField(null=True, blank=True)
+    phone= models.CharField(max_length=100, null=True, blank=True)
+    status= models.CharField(max_length=100, choices=[('pending', 'pending'), ('in progress', 'in progress'), ('completed', 'completed')])
     last_visit= models.DateField(null=True, blank=True)
     
     create_at= models.DateTimeField(auto_now_add=True)
     update_at= models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.machine.name
+
+    class Meta:
+        ordering = ['-id']
     
     
 class malfunction_report(models.Model):
     malfunction_request= models.ForeignKey(malfunction_request, on_delete=models.CASCADE)
     description= models.TextField()
-    file= models.FileField(upload_to='malfunction_report_files/', null=True, blank=True)
+    file= models.FileField(upload_to=upload_to, null=True, blank=True)
     create_at= models.DateTimeField(auto_now_add=True)
     update_at= models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.malfunction_request.machine.name
+
+    class Meta:
+        ordering = ['-id']
     
 # malfunction invoice
 class malfunction_invoice(models.Model):
     malfunction_request= models.ForeignKey(malfunction_request, on_delete=models.CASCADE)
     description= models.TextField()
-    file= models.FileField(upload_to='malfunction_invoice_files/', null=True, blank=True)
+    file= models.FileField(upload_to=upload_to, null=True, blank=True)
     create_at= models.DateTimeField(auto_now_add=True)
     update_at= models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.malfunction_request.machine.name
+
+    class Meta:
+        ordering = ['-id']
+
+
+
+
+
+
+
+
+
+
+
+
     
 # automation request (project_type , machines_number (from-to) ,name , phone , email , date_time)
 class automation_request(models.Model):
@@ -105,19 +144,25 @@ class automation_request(models.Model):
     def __str__(self):
         return self.name
     
+    class Meta:
+        ordering = ['-id']
+    
 
 
 class market_category(models.Model):
     name= models.CharField(max_length=100)
     description= models.TextField(null=True, blank=True)
-    image= models.ImageField(upload_to='market_category_images/', null=True, blank=True)
+    image= models.ImageField(upload_to=upload_to, null=True, blank=True)
     create_at= models.DateTimeField(auto_now_add=True)
     update_at= models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['-id']
     
 class market_product(models.Model):
-    image= models.ImageField(upload_to='market_product_images/', null=True, blank=True)
+    image= models.ImageField(upload_to=upload_to, null=True, blank=True)
     owner=models.ForeignKey(CustomUser, on_delete=models.SET_NULL,blank=True,null=True)
     name= models.CharField(max_length=100)
     description= models.TextField(null=True, blank=True)
@@ -134,9 +179,17 @@ class market_product(models.Model):
     factory=models.ForeignKey(factory, on_delete=models.SET_NULL, null=True, blank=True)
     create_at= models.DateTimeField(auto_now_add=True)
     update_at= models.DateTimeField(auto_now=True)
+    sku = models.CharField(max_length=50, null=True, blank=True)  
+    quantity = models.PositiveIntegerField(default=0)  
+    status = models.CharField(max_length=100, choices=[('available', 'available'), ('out_of_stock', 'out_of_stock')], default='available')  # Added Status
+    condition_details = models.TextField(null=True, blank=True)  
+    discount_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  
     
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ['-id']
     
 # order 
 class market_order_request(models.Model):
@@ -161,6 +214,9 @@ class market_order_request(models.Model):
     update_at= models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.product.name
+    
+    class Meta:
+        ordering = ['-id']
 
 
 
@@ -178,13 +234,16 @@ class Contarct(models.Model):
     machine_number=models.CharField(max_length=100)
     factory=models.ForeignKey(factory, on_delete=models.CASCADE)
     # التوقيع
-    signature=models.CharField(max_length=100, null=True, blank=True)
+    signature=models.TextField(null=True, blank=True)
     description=models.TextField()
-    file=models.FileField(upload_to='contracts/')
+    file=models.FileField(upload_to=upload_to)
     create_at= models.DateTimeField(auto_now_add=True)
     update_at= models.DateTimeField(auto_now=True)
     def __str__(self):
         return self.code
+
+    class Meta:
+        ordering = ['-id']
 
 
 class shipping_detials(models.Model):
@@ -194,4 +253,7 @@ class shipping_detials(models.Model):
 
     create_at= models.DateTimeField(auto_now_add=True)
     update_at= models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-id']
     

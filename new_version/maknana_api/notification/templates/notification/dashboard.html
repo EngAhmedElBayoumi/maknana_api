@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audit Log Dashboard</title>
+    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background: #333;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .notifications {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .notifications-header {
+            background: #007bff;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+        }
+        .notification-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            animation: fadeIn 0.5s ease-in;
+        }
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+        .notification-item.new {
+            background-color: #e8f4fd;
+            border-left: 4px solid #007bff;
+        }
+        .notification-meta {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        .action-created { color: #28a745; }
+        .action-updated { color: #ffc107; }
+        .action-deleted { color: #dc3545; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .status {
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Audit Log Dashboard</h1>
+            <p>Real-time monitoring of model changes</p>
+        </div>
+        
+        <div id="connection-status" class="status disconnected">
+            Connecting to real-time notifications...
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="total-logs">-</div>
+                <div>Total Logs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="today-logs">-</div>
+                <div>Today's Logs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="week-logs">-</div>
+                <div>This Week</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="month-logs">-</div>
+                <div>This Month</div>
+            </div>
+        </div>
+        
+        <div class="notifications">
+            <div class="notifications-header">
+                Real-time Notifications
+            </div>
+            <div id="notifications-list">
+                <div class="notification-item">
+                    <div>Waiting for notifications...</div>
+                    <div class="notification-meta">Connect to see real-time updates</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Pusher configuration
+        const pusher = new Pusher('{{ pusher_key }}', {
+            cluster: '{{ pusher_cluster }}',
+            encrypted: true
+        });
+
+        // Subscribe to audit channel
+        const auditChannel = pusher.subscribe('audit-channel');
+        
+        // Connection status
+        const statusElement = document.getElementById('connection-status');
+        
+        pusher.connection.bind('connected', function() {
+            statusElement.textContent = 'Connected to real-time notifications';
+            statusElement.className = 'status connected';
+        });
+        
+        pusher.connection.bind('disconnected', function() {
+            statusElement.textContent = 'Disconnected from real-time notifications';
+            statusElement.className = 'status disconnected';
+        });
+
+        // Listen for model changes
+        auditChannel.bind('model-change', function(data) {
+            addNotification(data);
+        });
+
+        function addNotification(data) {
+            const notificationsList = document.getElementById('notifications-list');
+            
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'notification-item new';
+            
+            const actionClass = `action-${data.action}`;
+            const timestamp = new Date(data.timestamp).toLocaleString();
+            
+            notification.innerHTML = `
+                <div>
+                    <span class="${actionClass}"><strong>${data.action.toUpperCase()}</strong></span>
+                    ${data.model} (ID: ${data.object_id})
+                    by <strong>${data.user}</strong>
+                </div>
+                <div class="notification-meta">
+                    ${timestamp}
+                    ${data.changes ? '• Changes: ' + Object.keys(data.changes).join(', ') : ''}
+                </div>
+            `;
+            
+            // Add to top of list
+            if (notificationsList.firstChild) {
+                notificationsList.insertBefore(notification, notificationsList.firstChild);
+            } else {
+                notificationsList.appendChild(notification);
+            }
+            
+            // Remove 'new' class after animation
+            setTimeout(() => {
+                notification.classList.remove('new');
+            }, 3000);
+            
+            // Keep only last 50 notifications
+            const notifications = notificationsList.children;
+            if (notifications.length > 50) {
+                notificationsList.removeChild(notifications[notifications.length - 1]);
+            }
+        }
+
+        // Load initial statistics
+        async function loadStatistics() {
+            try {
+                const response = await fetch('/api/notifications/statistics/', {
+                    headers: {
+                        'Authorization': 'Bearer ' + localStorage.getItem('access_token')
+                    }
+                });
+                
+                if (response.ok) {
+                    const stats = await response.json();
+                    document.getElementById('total-logs').textContent = stats.total_logs;
+                    document.getElementById('today-logs').textContent = stats.today_logs;
+                    document.getElementById('week-logs').textContent = stats.week_logs;
+                    document.getElementById('month-logs').textContent = stats.month_logs;
+                }
+            } catch (error) {
+                console.error('Error loading statistics:', error);
+            }
+        }
+
+        // Load statistics on page load
+        loadStatistics();
+        
+        // Refresh statistics every 30 seconds
+        setInterval(loadStatistics, 30000);
+    </script>
+</body>
+</html>
+

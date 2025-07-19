@@ -1,0 +1,136 @@
+http://127.0.0.1:8000/api/notifications/audit-logs/
+{
+    "count": 8,
+    "next": null,
+    "previous": null,
+    "results": [
+        {
+            "id": 8,
+            "action": "updated",
+            "timestamp": "2025-07-09T12:29:01.483309Z",
+            "model_name": "factory",
+            "object_id": 64,
+            "object_repr": "edit factory to test logs"
+        },
+        {
+            "id": 7,
+            "action": "created",
+            "timestamp": "2025-07-09T12:28:21.090983Z",
+            "model_name": "factory",
+            "object_id": 64,
+            "object_repr": "create factory to test logs"
+        },
+        {
+            "id": 6,
+            "action": "updated",
+            "timestamp": "2025-07-09T12:18:12.602882Z",
+            "model_name": "CustomUser",
+            "object_id": 1,
+            "object_repr": "ahmed@gmail.com"
+        },
+        {
+            "id": 5,
+            "user_email": "test@example.com",
+            "action": "deleted",
+            "timestamp": "2025-07-09T12:04:26.629276Z",
+            "model_name": "service",
+            "object_id": 53,
+            "object_repr": "Test Service"
+        },
+        {
+            "id": 4,
+            "user_email": "test@example.com",
+            "action": "updated",
+            "timestamp": "2025-07-09T12:04:26.344798Z",
+            "model_name": "service",
+            "object_id": 53,
+            "object_repr": "Test Service"
+        },
+        {
+            "id": 3,
+            "user_email": "test@example.com",
+            "action": "created",
+            "timestamp": "2025-07-09T12:04:26.064204Z",
+            "model_name": "service",
+            "object_id": 53,
+            "object_repr": "Test Service"
+        },
+        {
+            "id": 2,
+            "action": "created",
+            "timestamp": "2025-07-09T12:04:25.605332Z",
+            "model_name": "CustomUser",
+            "object_id": 71,
+            "object_repr": "test@example.com"
+        },
+        {
+            "id": 1,
+            "action": "created",
+            "timestamp": "2025-07-09T12:01:00.113597Z",
+            "model_name": "Migration",
+            "object_id": 30,
+            "object_repr": "Migration 0001_initial for notification"
+        }
+    ]
+}
+
+
+http://127.0.0.1:8000/api/notifications/audit-logs/7/
+{
+    "id": 7,
+    "user": null,
+    "action": "created",
+    "timestamp": "2025-07-09T12:28:21.090983Z",
+    "content_type": 15,
+    "content_type_name": "factory",
+    "object_id": 64,
+    "changes": {
+        "id": {
+            "old": null,
+            "new": "64"
+        },
+        "name": {
+            "old": null,
+            "new": "create factory to test logs"
+        },
+        "location": {
+            "old": null,
+            "new": "mansoura"
+        },
+        "user": {
+            "old": null,
+            "new": "ssssssns@example.com"
+        },
+        "phone": {
+            "old": null,
+            "new": "string"
+        },
+        "country_code": {
+            "old": null,
+            "new": "string"
+        },
+        "mobile_code": {
+            "old": null,
+            "new": "string"
+        },
+        "responsible_user": {
+            "old": null,
+            "new": "string"
+        },
+        "create_at": {
+            "old": null,
+            "new": "2025-07-09 12:28:20.661382+00:00"
+        },
+        "update_at": {
+            "old": null,
+            "new": "2025-07-09 12:28:20.661382+00:00"
+        }
+    },
+    "model_name": "factory",
+    "object_repr": "create factory to test logs"
+}
+
+
+first how the user is null 
+this action i made it will login user from the api 
+and also i want in the list to display user with the other data for each element
